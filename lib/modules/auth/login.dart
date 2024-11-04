@@ -1,3 +1,5 @@
+import 'package:finanzas_johana/kernel/widgets/password.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class Login extends StatefulWidget {
@@ -12,7 +14,43 @@ class _Login2State extends State<Login> {
       GlobalKey<FormState>(); // Clave para el formulario
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
-  bool _isObscure = true;
+  final bool _isObscured = true;
+  bool _isValid = false; // para saber si los campos son válidos
+  bool _emailTouched = false;
+  bool _passwordTouched = false;
+  final bool _isObscure = true;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  String? _validatePassword(String? value) {
+    if (!_passwordTouched) return null;
+    if (value == null || value.isEmpty) {
+      return 'Por favor ingresa tu contraseña';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (!_emailTouched) return null;
+    if (value == null || value.isEmpty) {
+      return 'Por favor ingresa tu correo';
+    }
+    if (!value.contains('@')) {
+      return 'Por favor ingresa un correo válido';
+    }
+    return null;
+  }
+
+  void _validateForm() {
+    setState(() {
+      _isValid = _formKey.currentState?.validate() ?? false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +64,7 @@ class _Login2State extends State<Login> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/fondo.jpeg',
+                  'assets/default.png',
                   width: 200,
                   height: 200,
                 ),
@@ -40,38 +78,15 @@ class _Login2State extends State<Login> {
                   ),
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, ingrese su correo electrónico';
-                    }
-                    return null;
+                  validator: _validateEmail,
+                  onTap: () {
+                    setState(() {
+                      _emailTouched = true;
+                    });
                   },
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  decoration: InputDecoration(
-                    hintText: 'Contraseña',
-                    label: const Text('Contraseña'),
-                    labelStyle: const TextStyle(color: Colors.black),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _isObscure = !_isObscure;
-                        });
-                      },
-                      icon: Icon(
-                          _isObscure ? Icons.visibility : Icons.visibility_off),
-                    ),
-                  ),
-                  controller: _password,
-                  obscureText: _isObscure,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor, ingrese su contraseña';
-                    }
-                    return null;
-                  },
-                ),
+                TextFieldPassword(controller: _password),
                 const SizedBox(
                   height: 16,
                 ),
@@ -79,10 +94,34 @@ class _Login2State extends State<Login> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        setState(() {
+                          _emailTouched = true;
+                          _passwordTouched = true;
+                        });
+
                         if (_formKey.currentState!.validate()) {
-                          print('Email: ${_email.text}');
-                          print('Password: ${_password.text}');
+                          try {
+                            final credential = await FirebaseAuth.instance
+                                .signInWithEmailAndPassword(
+                                    email: _email.text,
+                                    password: _password.text);
+                            Navigator.pushReplacementNamed(
+                                context, '/navigation');
+                          } on FirebaseAuthException catch (e) {
+                            if (e.code == 'user-not-found') {
+                              print('No user found for that email.');
+                            } else if (e.code == 'wrong-password') {
+                              print('Wrong password provided for that user.');
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Error al iniciar sesión, verifica tus datos'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       },
                       style: OutlinedButton.styleFrom(
@@ -95,6 +134,19 @@ class _Login2State extends State<Login> {
                     )),
                 const SizedBox(
                   height: 16,
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/register');
+                  },
+                  child: const Text(
+                    'Registrarse',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
                 SizedBox(
                   width: double.infinity,

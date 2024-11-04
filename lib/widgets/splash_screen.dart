@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -12,7 +13,14 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/login');
+      FirebaseAuth.instance.authStateChanges().listen((User? user) {
+        if (user != null) {
+          print(user.uid);
+          Navigator.pushReplacementNamed(context, '/profile');
+        } else {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      });
     });
   }
 
@@ -22,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.blueGrey,
       body: Center(
         child: Image.asset(
-          'assets/fondo.jpeg',
+          'assets/default.png',
           width: 200,
           height: 200,
         ),
